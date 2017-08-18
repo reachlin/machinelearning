@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python import debug as tf_debug
 
 import data_loader as data
 
@@ -14,29 +15,33 @@ tf.logging.set_verbosity(tf.logging.DEBUG)
 
 
 def cnn_model_fn(features, labels, mode):
+  img_size = 128
+  num_filter = 16 #32
+  pool_size = 4
+
   """Model function for CNN."""
   # Input Layer
   # Reshape X to 4-D tensor: [batch_size, width, height, channels]
   # MNIST images are 28x28 pixels, and have one color channel
-  input_layer = tf.reshape(features["x"], [-1, 128, 128, 1])
+  input_layer = tf.reshape(features["x"], [-1, img_size, img_size, 1])
 
   # Convolutional Layer #1
   # Computes 32 features using a 5x5 filter with ReLU activation.
   # Padding is added to preserve width and height.
-  # Input Tensor Shape: [batch_size, 28, 28, 1]
-  # Output Tensor Shape: [batch_size, 28, 28, 32]
+  # Input Tensor Shape: [batch_size, 128, 128, 1]
+  # Output Tensor Shape: [batch_size, 64, 64, 32]
   conv1 = tf.layers.conv2d(
       inputs=input_layer,
-      filters=32,
+      filters=num_filter,
       kernel_size=[5, 5],
       padding="same",
       activation=tf.nn.relu)
 
   # Pooling Layer #1
   # First max pooling layer with a 2x2 filter and stride of 2
-  # Input Tensor Shape: [batch_size, 28, 28, 32]
-  # Output Tensor Shape: [batch_size, 14, 14, 32]
-  pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
+  # Input Tensor Shape: [batch_size, 64, 64, 64]
+  # Output Tensor Shape: [batch_size, 32, 32, 64]
+  pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[pool_size, pool_size], strides=pool_size)
 
   # Convolutional Layer #2
   # Computes 64 features using a 5x5 filter.
@@ -45,27 +50,29 @@ def cnn_model_fn(features, labels, mode):
   # Output Tensor Shape: [batch_size, 14, 14, 64]
   conv2 = tf.layers.conv2d(
       inputs=pool1,
-      filters=64,
+      filters=num_filter*2,
       kernel_size=[5, 5],
       padding="same",
       activation=tf.nn.relu)
-
+  current_img_size = img_size//pool_size
   # Pooling Layer #2
   # Second max pooling layer with a 2x2 filter and stride of 2
   # Input Tensor Shape: [batch_size, 14, 14, 64]
   # Output Tensor Shape: [batch_size, 7, 7, 64]
-  pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
+  pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[pool_size, pool_size], strides=pool_size)
 
   # Flatten tensor into a batch of vectors
   # Input Tensor Shape: [batch_size, 32, 32, 64]
   # Output Tensor Shape: [batch_size, 32 * 32 * 64]
-  pool2_flat = tf.reshape(pool2, [-1, 32 * 32 * 64])
+  current_img_size = current_img_size//pool_size
+  flat_size = current_img_size * current_img_size * num_filter*2
+  pool2_flat = tf.reshape(pool2, [-1, flat_size])
 
   # Dense Layer
   # Densely connected layer with 1024 neurons
   # Input Tensor Shape: [batch_size, 32 * 32 * 64]
   # Output Tensor Shape: [batch_size, 65536]
-  dense = tf.layers.dense(inputs=pool2_flat, units=65536, activation=tf.nn.relu)
+  dense = tf.layers.dense(inputs=pool2_flat, units=flat_size, activation=tf.nn.relu)
 
   # Add dropout operation; 0.6 probability that element will be kept
   dropout = tf.layers.dropout(
@@ -126,6 +133,7 @@ def main(unused_argv):
   tensors_to_log = {"probabilities": "softmax_tensor"}
   logging_hook = tf.train.LoggingTensorHook(
       tensors=tensors_to_log, every_n_iter=50)
+  debug_hook = tf_debug.LocalCLIDebugHook()
 
   # Train the model
   train_input_fn = tf.estimator.inputs.numpy_input_fn(
