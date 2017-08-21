@@ -5,6 +5,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import argparse
+import sys
 import numpy as np
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -12,7 +14,7 @@ from tensorflow.python import debug as tf_debug
 import data_loader as data
 
 tf.logging.set_verbosity(tf.logging.DEBUG)
-
+FLAGS = None
 
 def cnn_model_fn(features, labels, mode):
   img_size = 128
@@ -94,14 +96,14 @@ def cnn_model_fn(features, labels, mode):
     return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
   # Calculate Loss (for both TRAIN and EVAL modes)
-  onehot_labels = tf.cast(labels, tf.int32) #tf.one_hot(indices=tf.cast(labels, tf.int32), depth=10)
+  onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=10)
 
   loss = tf.losses.softmax_cross_entropy(
       onehot_labels=onehot_labels, logits=logits)
 
   # Configure the Training Op (for TRAIN mode)
   if mode == tf.estimator.ModeKeys.TRAIN:
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.0001)
     train_op = optimizer.minimize(
         loss=loss,
         global_step=tf.train.get_global_step())
@@ -115,18 +117,24 @@ def cnn_model_fn(features, labels, mode):
       mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 
-def main(unused_argv):
+def main(argv):
+  if FLAGS.predict is None:
+    train()
+  else:
+    predict()
+
+def train():
   # Load training and eval data
-  data_train_data, data_train_labels = data.get_train_data()
+  data_train_data, data_train_labels = data.get_train_data(onehot=False)
   train_data = np.asarray(data_train_data, dtype=np.float32)
   train_labels = np.asarray(data_train_labels, dtype=np.int32)
-  data_eval_data, data_eval_labels = data.get_test_data()
+  data_eval_data, data_eval_labels = data.get_test_data(onehot=False)
   eval_data = np.asarray(data_eval_data, dtype=np.float32)
   eval_labels = np.asarray(data_eval_labels, dtype=np.int32)
 
   # Create the Estimator
   mnist_classifier = tf.estimator.Estimator(
-      model_fn=cnn_model_fn, model_dir="data/convnet_model")
+      model_fn=cnn_model_fn, model_dir=FLAGS.model)
 
   # Set up logging for predictions
   # Log the values in the "Softmax" tensor with label "probabilities"
@@ -141,10 +149,10 @@ def main(unused_argv):
       y=train_labels,
       batch_size=10,
       num_epochs=None,
-      shuffle=False)
+      shuffle=True)
   mnist_classifier.train(
       input_fn=train_input_fn,
-      steps=20000,
+      steps=FLAGS.step,
       hooks=[logging_hook])
 
   # Evaluate the model and print results
@@ -156,6 +164,27 @@ def main(unused_argv):
   eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
   print(eval_results)
 
+def predict():
+  predict_data = np.asarray([data.get_img(FLAGS.predict)], dtype=np.float32)
+  mnist_classifier = tf.estimator.Estimator(
+      model_fn=cnn_model_fn, model_dir=FLAGS.model)
+  input_fn = tf.estimator.inputs.numpy_input_fn(
+      x={"x": predict_data},
+      num_epochs=1,
+      shuffle=False)
+  results = mnist_classifier.predict(input_fn=input_fn)
+  for i, p in enumerate(results):
+    print("Prediction probabilities: %s" % p)
+    print("The number is %s." % p["classes"])
+
 
 if __name__ == "__main__":
-  tf.app.run()
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--step', type=int, default=20000,
+                      help='steps to train')
+  parser.add_argument('--model', type=str, default='data/convnet_model',
+                      help='folder to save model')
+  parser.add_argument('--predict', type=str,
+                      help='predict the picture, bmp bw 128x128')
+  FLAGS, unparsed = parser.parse_known_args()
+  tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
