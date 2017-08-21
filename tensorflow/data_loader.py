@@ -36,4 +36,4 @@ def get_train_data(folders=["data", "data/hard1", "data/hard2"], onehot=True):
   return get_data([0,1,2,3,4,5,6,7,8,9], folders, onehot)
 
 def get_test_data(folders=["data/light"], onehot=True):
-  return get_data([0,4,3,7,0,0,1,2,5,9,8,8], folders, onehot)
+  return get_data([0,4,3,7,0,0,1,2,5,9,8,8,6], folders, onehot)
