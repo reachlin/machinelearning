@@ -9,9 +9,9 @@ from PIL import Image
 
 def get_img(path):
   im = Image.open(path)
-  im.thumbnail((128,128), Image.ANTIALIAS)
+  im = im.resize((128,128), Image.ANTIALIAS)
   # convert to black and white
-  im.convert('1')
+  im.convert('L')
   return list(im.getdata())
 
 def get_data(wanted_labels, folders=['data'], onehot=True):
