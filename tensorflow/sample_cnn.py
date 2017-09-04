@@ -9,7 +9,7 @@ import argparse
 import sys
 import numpy as np
 import tensorflow as tf
-from tensorflow.python import debug as tf_debug
+#from tensorflow.python import debug as tf_debug
 
 import data_loader as data
 
@@ -133,7 +133,7 @@ def train():
   tensors_to_log = {"probabilities": "softmax_tensor"}
   logging_hook = tf.train.LoggingTensorHook(
       tensors=tensors_to_log, every_n_iter=50)
-  debug_hook = tf_debug.LocalCLIDebugHook()
+  #debug_hook = tf_debug.LocalCLIDebugHook()
 
   # Train the model
   train_input_fn = tf.estimator.inputs.numpy_input_fn(
