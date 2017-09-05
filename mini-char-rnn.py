@@ -94,12 +94,18 @@ while True:
   if n % 100 == 0:
     sample_ix = sample(hprev, inputs[0], 200)
     txt = ''.join(ix_to_char[ix] for ix in sample_ix)
-    print '----\n %s \n----' % (txt, )
+    #print '----\n %s \n----' % (txt, )
 
   # forward seq_length characters through the net and fetch gradient
   loss, dWxh, dWhh, dWhy, dbh, dby, hprev = lossFun(inputs, targets, hprev)
   smooth_loss = smooth_loss * 0.999 + loss * 0.001
   if n % 100 == 0: print 'iter %d, loss: %f' % (n, smooth_loss) # print progress
+
+  if smooth_loss < 23.0:
+    sample_ix = sample(hprev, inputs[0], 20)
+    txt = ''.join(ix_to_char[ix] for ix in sample_ix)
+    if len(set(txt.split(','))) == 7:
+      print '----\n %s \n----' % txt
   
   # perform parameter update with Adagrad
   for param, dparam, mem in zip([Wxh, Whh, Why, bh, by], 
