@@ -3,9 +3,10 @@ Minimal character-level Vanilla RNN model. Written by Andrej Karpathy (@karpathy
 BSD License
 """
 import numpy as np
+import sys
 
 # data I/O
-data = open('input.txt', 'r').read() # should be simple plain text file
+data = open(sys.argv[1], 'r').read() # should be simple plain text file
 chars = list(set(data))
 data_size, vocab_size = len(data), len(chars)
 print 'data has %d characters, %d unique.' % (data_size, vocab_size)
@@ -72,6 +73,7 @@ def sample(h, seed_ix, n):
     h = np.tanh(np.dot(Wxh, x) + np.dot(Whh, h) + bh)
     y = np.dot(Why, h) + by
     p = np.exp(y) / np.sum(np.exp(y))
+    # https://gist.github.com/karpathy/d4dee566867f8291f086#gistcomment-2185838
     ix = np.random.choice(range(vocab_size), p=p.ravel())
     x = np.zeros((vocab_size, 1))
     x[ix] = 1
@@ -101,12 +103,11 @@ while True:
   smooth_loss = smooth_loss * 0.999 + loss * 0.001
   if n % 100 == 0: print 'iter %d, loss: %f' % (n, smooth_loss) # print progress
 
-  if smooth_loss < 23.0:
-    sample_ix = sample(hprev, inputs[0], 20)
+  if (smooth_loss < 10.0) or (n % 10000 == 0):
+    sample_ix = sample(hprev, inputs[0], 100)
     txt = ''.join(ix_to_char[ix] for ix in sample_ix)
-    if len(set(txt.split(','))) == 7:
-      print '----\n %s \n----' % txt
-  
+    print '----\n %s \n----' % txt
+
   # perform parameter update with Adagrad
   for param, dparam, mem in zip([Wxh, Whh, Why, bh, by], 
                                 [dWxh, dWhh, dWhy, dbh, dby], 
