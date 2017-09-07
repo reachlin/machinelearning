@@ -129,7 +129,7 @@ while True:
   # forward seq_length characters through the net and fetch gradient
   loss, dWxh, dWhh, dWhy, dbh, dby, hprev = lossFun(inputs, targets, hprev)
   smooth_loss = smooth_loss * 0.999 + loss * 0.001
-  if n % 100 == 0:
+  if n % 1000 == 0:
     print 'iter %d, loss: %f' % (n, smooth_loss) # print progress
 
   if n % 10000 == 0:
