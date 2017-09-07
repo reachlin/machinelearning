@@ -1,13 +1,23 @@
 """
 Minimal character-level Vanilla RNN model. Written by Andrej Karpathy (@karpathy)
 BSD License
+https://gist.github.com/karpathy/d4dee566867f8291f086
+
+Modified by reachlin@gmail.com
 """
+import argparse
 import numpy as np
 import sys
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-i", "--input", type=str, default="input.txt",
+                    help="utf8 encoded text file for training")
+parser.add_argument("-l", "--loss", type=int, default="10",
+                    help="expected loss when finish the training, default is 10")
+args = parser.parse_args()
 
 # data I/O
-data = open(sys.argv[1], 'r').read().decode("UTF-8") # should be simple plain text file
+data = open(args.input, 'r').read().decode("UTF-8") # should be simple plain text file
 chars = list(set(data))
 data_size, vocab_size = len(data), len(chars)
 print 'data has %d characters, %d unique.' % (data_size, vocab_size)
@@ -104,10 +114,12 @@ while True:
   smooth_loss = smooth_loss * 0.999 + loss * 0.001
   if n % 100 == 0: print 'iter %d, loss: %f' % (n, smooth_loss) # print progress
 
-  if (smooth_loss < 10.0) or (n % 10000 == 0):
+  if n % 10000 == 0:
     sample_ix = sample(hprev, inputs[0], 100)
     txt = ''.join(ix_to_char[ix] for ix in sample_ix)
     print '----\n %s \n----' % txt
+    if smooth_loss < args.loss:
+      sys.exit(0)
 
   # perform parameter update with Adagrad
   for param, dparam, mem in zip([Wxh, Whh, Why, bh, by], 
