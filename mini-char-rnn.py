@@ -8,21 +8,44 @@ Modified by reachlin@gmail.com
 import argparse
 import numpy as np
 import sys
+import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input", type=str, default="input.txt",
                     help="utf8 encoded text file for training")
 parser.add_argument("-l", "--loss", type=int, default="10",
                     help="expected loss when finish the training, default is 10")
+parser.add_argument("-s", "--sample", type=int, default="100",
+                    help="the length of text to test the trained model")
+parser.add_argument("-t", "--test", type=str,
+                    help="the test char")
+parser.add_argument("-n", "--number", action="store_true",
+                    help="read a csv number file instead of normal txt")
+
 args = parser.parse_args()
 
-# data I/O
-data = open(args.input, 'r').read().decode("UTF-8") # should be simple plain text file
-chars = list(set(data))
-data_size, vocab_size = len(data), len(chars)
-print 'data has %d characters, %d unique.' % (data_size, vocab_size)
-char_to_ix = { ch:i for i,ch in enumerate(chars) }
-ix_to_char = { i:ch for i,ch in enumerate(chars) }
+if args.number:
+  # data I/O
+  txt = re.split('\D+', open(args.input, 'r').read())
+  data = []
+  for item in txt:
+    try:
+      data.append(int(item))
+    except:
+      print("error in input: ", item)
+  chars = list(set(data))
+  data_size, vocab_size = len(data), len(chars)
+  print 'data has %d characters, %d unique.' % (data_size, vocab_size)
+  char_to_ix = { ch:i for i,ch in enumerate(chars) }
+  ix_to_char = { i:ch for i,ch in enumerate(chars) }
+else:
+  # data I/O
+  data = open(args.input, 'r').read().decode("UTF-8") # should be simple plain text file
+  chars = list(set(data))
+  data_size, vocab_size = len(data), len(chars)
+  print 'data has %d characters, %d unique.' % (data_size, vocab_size)
+  char_to_ix = { ch:i for i,ch in enumerate(chars) }
+  ix_to_char = { i:ch for i,ch in enumerate(chars) }
 
 # hyperparameters
 hidden_size = 100 # size of hidden layer of neurons
@@ -103,20 +126,23 @@ while True:
   inputs = [char_to_ix[ch] for ch in data[p:p+seq_length]]
   targets = [char_to_ix[ch] for ch in data[p+1:p+seq_length+1]]
 
-  # sample from the model now and then
-  if n % 100 == 0:
-    sample_ix = sample(hprev, inputs[0], 200)
-    txt = ''.join(ix_to_char[ix] for ix in sample_ix)
-    #print '----\n %s \n----' % (txt, )
-
   # forward seq_length characters through the net and fetch gradient
   loss, dWxh, dWhh, dWhy, dbh, dby, hprev = lossFun(inputs, targets, hprev)
   smooth_loss = smooth_loss * 0.999 + loss * 0.001
-  if n % 100 == 0: print 'iter %d, loss: %f' % (n, smooth_loss) # print progress
+  if n % 100 == 0:
+    print 'iter %d, loss: %f' % (n, smooth_loss) # print progress
 
   if n % 10000 == 0:
-    sample_ix = sample(hprev, inputs[0], 100)
-    txt = ''.join(ix_to_char[ix] for ix in sample_ix)
+    test = inputs[0]
+    if smooth_loss < args.loss:
+      print "low loss, starting test now..."
+      test = char_to_ix[args.test]
+    sample_ix = sample(hprev, test, args.sample)
+    sample_char = [ix_to_char[ix] for ix in sample_ix]
+    if args.number:
+      txt = ' '.join([str(ch) for ch in sample_char])
+    else:
+      txt = ''.join(sample_char)
     print '----\n %s \n----' % txt
     if smooth_loss < args.loss:
       sys.exit(0)
