@@ -136,7 +136,8 @@ while True:
     test = inputs[0]
     if smooth_loss < args.loss:
       print "low loss, starting test now..."
-      test = char_to_ix[args.test]
+      if args.test is not None:
+        test = char_to_ix[args.test]
     sample_ix = sample(hprev, test, args.sample)
     sample_char = [ix_to_char[ix] for ix in sample_ix]
     if args.number:
