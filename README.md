@@ -12,8 +12,9 @@ python sample_mnist.py --predict data/0x4e03.bmp # predict an image
 ```
 
 ## mini-char-rnn.py
-Modify [AK's RNN gist](http://karpathy.github.io/2015/05/21/rnn-effectiveness/) to support unicode.
+Modify [AK's RNN gist](http://karpathy.github.io/2015/05/21/rnn-effectiveness/) to support unicode. It can also run on the history data of lottery to predict the next number:P
 
 ```
 python mini-char-rnn.py -i input_chinese.txt -l 40
+python mini-char-rnn.py -i lottery.txt -l 30 -n -test 08
 ```
